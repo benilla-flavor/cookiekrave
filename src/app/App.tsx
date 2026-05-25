@@ -42,9 +42,9 @@ const sparkData = [
 ];
 
 // ── AlertCard ──────────────────────────────────────────────────────────────
-function AlertCard({ icon: Icon, iconColor, iconBg, title, subtitle, dot }: {
+function AlertCard({ icon: Icon, iconColor, iconBg, title, subtitle, dot, onView }: {
   icon: React.ElementType; iconColor: string; iconBg: string;
-  title: string; subtitle: string; dot: string;
+  title: string; subtitle: string; dot: string; onView?: () => void;
 }) {
   const [hov, setHov] = useState(false);
   return (
@@ -62,7 +62,9 @@ function AlertCard({ icon: Icon, iconColor, iconBg, title, subtitle, dot }: {
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <div className="w-2 h-2 rounded-full" style={{ background: dot, boxShadow: `0 0 5px ${dot}` }} />
-        <button className="px-3 py-1 rounded-lg text-xs font-semibold"
+        <button
+          onClick={onView}
+          className="px-3 py-1 rounded-lg text-xs font-semibold"
           style={{ background: C.cobalt, color: "#FFF", fontFamily: "'Montserrat', sans-serif", fontSize: 10, boxShadow: `0 2px 8px ${C.cobalt}50` }}>
           View
         </button>
@@ -72,44 +74,44 @@ function AlertCard({ icon: Icon, iconColor, iconBg, title, subtitle, dot }: {
 }
 
 // ── VerticalBar ────────────────────────────────────────────────────────────
-const BAR_H = 130;
-
 function VerticalBar({ sections, total, typeLabel }: {
   sections: { value: number; gradient: string; label: string; color: string }[];
   total: number; typeLabel: string;
 }) {
-  // Build stacked segments from bottom up, each as a % of total height
-  let bottomPct = 0;
-  const segs = sections.map(s => {
-    const heightPct = (s.value / total) * 100;
-    const seg = { ...s, heightPct, bottomPct };
-    bottomPct += heightPct;
-    return seg;
-  });
-
   return (
-    <div className="flex flex-col items-center gap-2">
-      {/* Bar track */}
-      <div style={{ width: 52, height: BAR_H, borderRadius: 16, overflow: "hidden", background: C.bg, ...sPressed, position: "relative" }}>
-        {segs.map((s, i) => (
+    <div className="flex flex-col items-center gap-2" style={{ width: 56 }}>
+      {/* Track */}
+      <div style={{
+        width: 56,
+        height: 140,
+        borderRadius: 14,
+        background: C.bg,
+        boxShadow: `inset -4px -4px 8px ${C.sl}, inset 4px 4px 8px ${C.sd}`,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+        overflow: "hidden",
+        flexShrink: 0,
+      }}>
+        {/* Render segments bottom-up by reversing */}
+        {[...sections].reverse().map((s, i) => (
           <div key={i} style={{
-            position: "absolute",
-            bottom: `${s.bottomPct}%`,
-            left: 0, right: 0,
-            height: `${s.heightPct}%`,
+            width: "100%",
+            height: `${(s.value / total) * 100}%`,
             background: s.gradient,
-            // Only round the top of the topmost segment
-            borderRadius: i === segs.length - 1 ? "14px 14px 0 0" : 0,
+            flexShrink: 0,
           }} />
         ))}
       </div>
-      {/* Value label */}
+
+      {/* Value */}
       <div className="text-center">
         <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, fontWeight: 500, color: C.fore }}>
           {sections.map(s => s.value).join("/")}
         </span>
         <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: C.muted }}>/{total}</span>
       </div>
+
       {/* Legend */}
       <div className="flex flex-col gap-0.5 items-start">
         {sections.map(s => (
@@ -127,6 +129,7 @@ function VerticalBar({ sections, total, typeLabel }: {
 // ── App ────────────────────────────────────────────────────────────────────
 export default function App() {
   const [activeNav, setActiveNav] = useState("Home");
+  const [alertModal, setAlertModal] = useState<{ title: string; body: string } | null>(null);
 
   const navItems = [
     { icon: Home,        label: "Home" },
@@ -257,7 +260,7 @@ export default function App() {
                 />
                 <div className="self-stretch w-px mb-6" style={{ background: `${C.fore}12` }} />
                 <VerticalBar
-                  sections={[{ value: 42, gradient: `linear-gradient(180deg, #34A85A 0%, #1F6E3A 100%)`, label: "In Prep", color: "#34A85A" }]}
+                  sections={[{ value: 50, gradient: `linear-gradient(180deg, #34A85A 0%, #1F6E3A 100%)`, label: "In Prep (42/50)", color: "#34A85A" }]}
                   total={50} typeLabel="Prep Progress"
                 />
               </div>
@@ -344,17 +347,41 @@ export default function App() {
               <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: 13, fontWeight: 600, color: C.fore, letterSpacing: "0.04em" }}>Recent Alerts</h3>
               <div className="flex flex-col gap-3 flex-1 justify-center">
                 <AlertCard icon={CheckCircle2} iconColor={C.successGreen} iconBg={`${C.successGreen}18`}
-                  title="Order #3421 Complete — View" subtitle="Completed 2 min ago · Ready for pickup" dot={C.successGreen} />
+                  title="Order #3421 Complete" subtitle="Completed 2 min ago · Ready for pickup" dot={C.successGreen}
+                  onView={() => setActiveNav("Orders")} />
                 <AlertCard icon={AlertTriangle} iconColor={C.warningAmber} iconBg={`${C.warningAmber}18`}
-                  title="White Chocolate Low — View" subtitle="Stock at 18% · Reorder needed" dot={C.warningAmber} />
+                  title="White Chocolate Low" subtitle="Stock at 18% · Reorder needed" dot={C.warningAmber}
+                  onView={() => setActiveNav("Inventory")} />
                 <AlertCard icon={ChefHat} iconColor={C.cobalt} iconBg={`${C.cobalt}18`}
-                  title="Oatmeal Raisin Batch 4A — View" subtitle="Batch ready for oven · 12 dozen" dot={C.cobalt} />
+                  title="Oatmeal Raisin Batch 4A" subtitle="Batch ready for oven · 12 dozen" dot={C.cobalt}
+                  onView={() => setAlertModal({ title: "Oatmeal Raisin Batch 4A", body: "Batch 4A is ready for the oven. 12 dozen prepared and waiting. Estimated bake time: 14 minutes at 350°F." })} />
               </div>
             </div>
 
           </div>
         </>}
       </div>
+
+      {/* Alert detail modal */}
+      {alertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(17,9,5,0.65)", backdropFilter: "blur(4px)" }}
+          onClick={() => setAlertModal(null)}>
+          <div className="rounded-2xl p-6 flex flex-col gap-4" onClick={e => e.stopPropagation()}
+            style={{ width: 400, background: C.bg, boxShadow: `-12px -12px 24px ${C.sl}, 12px 12px 24px ${C.sd}, 0 0 0 1px ${C.gold}25` }}>
+            <div className="flex items-center justify-between">
+              <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: 15, fontWeight: 600, color: C.fore }}>{alertModal.title}</h3>
+              <button onClick={() => setAlertModal(null)} className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: `${C.fore}10`, fontFamily: "'Montserrat', sans-serif", fontSize: 14, color: C.muted }}>✕</button>
+            </div>
+            <p style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, color: C.foreMid, lineHeight: 1.6 }}>{alertModal.body}</p>
+            <button onClick={() => setAlertModal(null)} className="self-end px-5 py-2 rounded-xl"
+              style={{ background: `linear-gradient(135deg, ${C.gold}, ${C.goldDark})`, fontFamily: "'Montserrat', sans-serif", fontSize: 11, fontWeight: 600, color: "#1A0C06", boxShadow: `0 4px 14px ${C.gold}50` }}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
